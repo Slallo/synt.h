@@ -59,4 +59,4 @@ MIT
 
 ---
 
-*Fra Lupo*
+*Francesco Lupo*
