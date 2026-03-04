@@ -26,6 +26,8 @@
     gap: clamp(0.8rem, 3vw, 3rem);
     flex-wrap: wrap;
     max-width: 95vw;
+    position: relative;
+    z-index: 2;
   }
 
   .glyph {
@@ -133,6 +135,9 @@
     color: #ddd;
     letter-spacing: 0.15em;
     margin-top: 2.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
   }
 
   .ripple {
@@ -159,6 +164,7 @@
     height: 60px;
     opacity: 0.7;
     pointer-events: none;
+    z-index: 10;
   }
 
   .glyph-rate {
@@ -257,6 +263,127 @@
     background: var(--active-color, #000);
     box-shadow: 0 0 8px var(--active-color, #000);
   }
+
+  /* === MIXER === */
+
+  #connection-svg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  #connection-svg.mixer-active {
+    pointer-events: none;
+  }
+
+  #connection-svg path.connection-line {
+    fill: none;
+    stroke-width: 3;
+    opacity: 0.5;
+    transition: opacity 0.3s;
+    pointer-events: stroke;
+    cursor: pointer;
+    stroke-linecap: round;
+  }
+
+  #connection-svg path.connection-line:hover {
+    opacity: 0.9;
+    stroke-width: 5;
+  }
+
+  #connection-svg path.connection-line.active-pulse {
+    opacity: 0.9;
+    stroke-width: 3;
+  }
+
+  #connection-svg circle.tension-handle {
+    fill: #fff;
+    stroke-width: 2;
+    cursor: grab;
+    pointer-events: all;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.2));
+    transition: r 0.15s;
+    r: 7;
+  }
+
+  #connection-svg circle.tension-handle:hover {
+    r: 10;
+  }
+
+  #connection-svg path.drag-line {
+    fill: none;
+    stroke: #ccc;
+    stroke-width: 2;
+    stroke-dasharray: 8 4;
+    opacity: 0.6;
+  }
+
+  .mixer-toggle {
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background: none;
+    transition: all 0.3s;
+    opacity: 0.4;
+    line-height: 1;
+  }
+
+  .mixer-toggle:hover {
+    opacity: 0.7;
+  }
+
+  .mixer-toggle.active {
+    opacity: 1;
+    border-color: #ddd;
+    background: #fafafa;
+  }
+
+  body.mixer-mode .glyph {
+    cursor: crosshair;
+  }
+
+  body.mixer-mode .glyph:hover {
+    transform: scale(1.12);
+  }
+
+  .connection-count {
+    font-family: 'Courier New', monospace;
+    font-size: 0.4rem;
+    color: #ccc;
+    position: absolute;
+    top: -0.5rem;
+    right: -0.5rem;
+    background: #f5f5f5;
+    border-radius: 50%;
+    width: 1rem;
+    height: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  body.mixer-mode .connection-count {
+    opacity: 1;
+  }
+
+  /* break animation */
+  @keyframes snapBreak {
+    0% { opacity: 1; stroke-dasharray: none; }
+    50% { opacity: 0.8; stroke-dasharray: 4 4; }
+    100% { opacity: 0; }
+  }
+
+  .snap-break {
+    animation: snapBreak 0.4s ease-out forwards;
+  }
 </style>
 </head>
 <body>
@@ -287,88 +414,114 @@
   <div class="legend-item" id="leg-u">
     <div class="legend-dot"></div>
     <span class="legend-code">!U</span>
-    <span class="legend-name">???</span>
+    <span class="legend-name">grafo</span>
   </div>
 </div>
 
+<svg id="connection-svg">
+  <defs>
+    <filter id="glow-filter">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+</svg>
+
 <div class="container">
-  <div class="glyph" data-note="dot" data-rate="300">
+  <div class="glyph" data-note="dot" data-rate="300" data-idx="0">
     <div class="char">.</div>
     <div class="char-reflection">.</div>
     <div class="label">ping</div>
     <div class="key-hint">1</div>
     <div class="glyph-rate"><input type="range" min="50" max="800" value="300" step="10"><span class="rate-val">300</span></div>
+    <div class="connection-count">0</div>
   </div>
-  <div class="glyph" data-note="comma" data-rate="300">
+  <div class="glyph" data-note="comma" data-rate="300" data-idx="1">
     <div class="char">,</div>
     <div class="char-reflection">,</div>
     <div class="label">nota</div>
     <div class="key-hint">2</div>
     <div class="glyph-rate"><input type="range" min="50" max="800" value="300" step="10"><span class="rate-val">300</span></div>
+    <div class="connection-count">0</div>
   </div>
-  <div class="glyph" data-note="semi" data-rate="300">
+  <div class="glyph" data-note="semi" data-rate="300" data-idx="2">
     <div class="char">;</div>
     <div class="char-reflection">;</div>
     <div class="label">totem</div>
     <div class="key-hint">3</div>
     <div class="glyph-rate"><input type="range" min="50" max="800" value="300" step="10"><span class="rate-val">300</span></div>
+    <div class="connection-count">0</div>
   </div>
-  <div class="glyph" data-note="colon" data-rate="300">
+  <div class="glyph" data-note="colon" data-rate="300" data-idx="3">
     <div class="char">:</div>
     <div class="char-reflection">:</div>
     <div class="label">ponte</div>
     <div class="key-hint">4</div>
     <div class="glyph-rate"><input type="range" min="50" max="800" value="300" step="10"><span class="rate-val">300</span></div>
+    <div class="connection-count">0</div>
   </div>
-  <div class="glyph" data-note="question" data-rate="300">
+  <div class="glyph" data-note="question" data-rate="300" data-idx="4">
     <div class="char">?</div>
     <div class="char-reflection">?</div>
     <div class="label">domanda</div>
     <div class="key-hint">5</div>
     <div class="glyph-rate"><input type="range" min="50" max="800" value="300" step="10"><span class="rate-val">300</span></div>
+    <div class="connection-count">0</div>
   </div>
-  <div class="glyph" data-note="parens" data-rate="300">
+  <div class="glyph" data-note="parens" data-rate="300" data-idx="5">
     <div class="char">( )</div>
     <div class="char-reflection">( )</div>
     <div class="label">abbraccio</div>
     <div class="key-hint">6</div>
     <div class="glyph-rate"><input type="range" min="50" max="800" value="300" step="10"><span class="rate-val">300</span></div>
+    <div class="connection-count">0</div>
   </div>
-  <div class="glyph" data-note="ampersand" data-rate="300">
+  <div class="glyph" data-note="ampersand" data-rate="300" data-idx="6">
     <div class="char">&amp;</div>
     <div class="char-reflection">&amp;</div>
     <div class="label">intreccio</div>
     <div class="key-hint">7</div>
     <div class="glyph-rate"><input type="range" min="50" max="800" value="300" step="10"><span class="rate-val">300</span></div>
+    <div class="connection-count">0</div>
   </div>
-  <div class="glyph" data-note="excl" data-rate="300">
+  <div class="glyph" data-note="excl" data-rate="300" data-idx="7">
     <div class="char">!</div>
     <div class="char-reflection">!</div>
     <div class="label">colpo</div>
     <div class="key-hint">8</div>
     <div class="glyph-rate"><input type="range" min="50" max="800" value="300" step="10"><span class="rate-val">300</span></div>
+    <div class="connection-count">0</div>
   </div>
-  <div class="glyph" data-note="backslash" data-rate="300">
+  <div class="glyph" data-note="backslash" data-rate="300" data-idx="8">
     <div class="char">\</div>
     <div class="char-reflection">\</div>
     <div class="label">caduta</div>
     <div class="key-hint">9</div>
     <div class="glyph-rate"><input type="range" min="50" max="800" value="300" step="10"><span class="rate-val">300</span></div>
+    <div class="connection-count">0</div>
   </div>
-  <div class="glyph" data-note="tilde" data-rate="300">
+  <div class="glyph" data-note="tilde" data-rate="300" data-idx="9">
     <div class="char">~</div>
     <div class="char-reflection">~</div>
     <div class="label">onda</div>
     <div class="key-hint">0</div>
     <div class="glyph-rate"><input type="range" min="50" max="800" value="300" step="10"><span class="rate-val">300</span></div>
+    <div class="connection-count">0</div>
   </div>
 </div>
 
-<div class="hint">clicca o tieni premuto i glifi · premi 1-9, 0 sulla tastiera</div>
+<div class="hint">
+  <span>clicca o tieni premuto i glifi · premi 1-9, 0 sulla tastiera</span>
+  <button class="mixer-toggle" id="mixerToggle" title="random-mixer">🎲</button>
+</div>
 
 <canvas id="waveform"></canvas>
 
 <script>
+// ===================== AUDIO ENGINE =====================
 let audioCtx = null;
 let analyser = null;
 let waveCanvas, waveCtx;
@@ -427,6 +580,16 @@ function blendColors() {
   return rgbToHex(r, g, b);
 }
 
+function blendTwoColors(hex1, hex2, t) {
+  const [r1, g1, b1] = hexToRgb(hex1);
+  const [r2, g2, b2] = hexToRgb(hex2);
+  return rgbToHex(
+    r1 + (r2 - r1) * t,
+    g1 + (g2 - g1) * t,
+    b1 + (b2 - b1) * t
+  );
+}
+
 function drawWaveform() {
   if (!analyser) { requestAnimationFrame(drawWaveform); return; }
   
@@ -436,7 +599,6 @@ function drawWaveform() {
 
   waveCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
   
-  // Glow effect
   waveCtx.shadowBlur = 15;
   waveCtx.shadowColor = currentColor;
   waveCtx.lineWidth = 2;
@@ -460,108 +622,128 @@ function drawWaveform() {
   requestAnimationFrame(drawWaveform);
 }
 
+// ===================== SOUND DEFINITIONS =====================
+// Each sound now returns its parameter object for mixing
+const soundParams = {
+  dot: { baseFreq: 1200, endFreq: 800, duration: 0.15, type: 'sine', attack: 0, decay: 0.15 },
+  comma: { baseFreq: 440, harmonics: [1,2,3,5], duration: 1.2, type: 'triangle' },
+  semi: { baseFreq: 220, chord: [220, 277.18, 329.63, 440], duration: 2, type: 'triangle' },
+  colon: { baseFreq: 660, endFreq: 440, duration: 0.1, type: 'square', double: true },
+  question: { baseFreq: 330, endFreq: 520, duration: 1.5, type: 'sine', rising: true },
+  parens: { baseFreq: 880, endFreq: 440, duration: 0.95, type: 'sine', mirror: true },
+  ampersand: { baseFreq: 293.66, steps: [293.66, 349.23, 440], duration: 1.5, type: 'triangle', weave: true },
+  excl: { baseFreq: 200, endFreq: 60, duration: 0.25, type: 'sawtooth', noise: true },
+  backslash: { baseFreq: 1000, endFreq: 80, duration: 1, type: 'sawtooth', fall: true },
+  tilde: { baseFreq: 523.25, duration: 2, type: 'sine', vibrato: true, lfoFreq: 6, lfoDepth: 30 }
+};
+
 const sounds = {
-  // . = short percussive ping
-  dot: () => {
+  dot: (params) => {
+    const p = params || soundParams.dot;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.08);
+    osc.type = p.type || 'sine';
+    osc.frequency.setValueAtTime(p.baseFreq, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(p.endFreq || p.baseFreq * 0.66, audioCtx.currentTime + (p.duration || 0.15) * 0.53);
     gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (p.duration || 0.15));
     osc.connect(gain);
     gain.connect(analyser);
     osc.start();
-    osc.stop(audioCtx.currentTime + 0.15);
+    osc.stop(audioCtx.currentTime + (p.duration || 0.15));
   },
 
-  // , = warm plucked string, A4
-  comma: () => {
-    const fundamental = 440;
-    [1, 2, 3, 5].forEach((harmonic, i) => {
+  comma: (params) => {
+    const p = params || soundParams.comma;
+    const fundamental = p.baseFreq || 440;
+    const harmonics = p.harmonics || [1, 2, 3, 5];
+    harmonics.forEach((harmonic, i) => {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      osc.type = i === 0 ? 'triangle' : 'sine';
+      osc.type = i === 0 ? (p.type || 'triangle') : 'sine';
       osc.frequency.value = fundamental * harmonic;
       const vol = 0.3 / (harmonic * 1.2);
       gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (p.duration || 1.2));
       osc.connect(gain);
       gain.connect(analyser);
       osc.start();
-      osc.stop(audioCtx.currentTime + 1.2);
+      osc.stop(audioCtx.currentTime + (p.duration || 1.2));
     });
   },
 
-  // ; = deep resonant Am chord, the totem
-  semi: () => {
-    const freqs = [220, 277.18, 329.63, 440];
+  semi: (params) => {
+    const p = params || soundParams.semi;
+    const freqs = p.chord || [220, 277.18, 329.63, 440];
     freqs.forEach((f, i) => {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      osc.type = 'triangle';
+      osc.type = p.type || 'triangle';
       osc.frequency.value = f;
       gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.2, audioCtx.currentTime + 0.8);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime + (p.duration || 2) * 0.4);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (p.duration || 2));
       osc.connect(gain);
       gain.connect(analyser);
       osc.start(audioCtx.currentTime + i * 0.06);
-      osc.stop(audioCtx.currentTime + 2);
+      osc.stop(audioCtx.currentTime + (p.duration || 2));
     });
   },
 
-  // : = double tap
-  colon: () => {
-    [0, 0.12].forEach(delay => {
+  colon: (params) => {
+    const p = params || soundParams.colon;
+    const delays = p.double ? [0, 0.12] : [0];
+    delays.forEach(delay => {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(660, audioCtx.currentTime + delay);
-      osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + delay + 0.06);
+      osc.type = p.type || 'square';
+      osc.frequency.setValueAtTime(p.baseFreq || 660, audioCtx.currentTime + delay);
+      osc.frequency.exponentialRampToValueAtTime(p.endFreq || 440, audioCtx.currentTime + delay + 0.06);
       gain.gain.setValueAtTime(0, audioCtx.currentTime);
       gain.gain.setValueAtTime(0.25, audioCtx.currentTime + delay);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + (p.duration || 0.1));
       osc.connect(gain);
       gain.connect(analyser);
       osc.start();
-      osc.stop(audioCtx.currentTime + delay + 0.1);
+      osc.stop(audioCtx.currentTime + delay + (p.duration || 0.1));
     });
   },
 
-  // ? = rising tone that hangs unresolved
-  question: () => {
+  question: (params) => {
+    const p = params || soundParams.question;
     const osc = audioCtx.createOscillator();
     const osc2 = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     const gain2 = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(330, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(520, audioCtx.currentTime + 0.4);
+    osc.type = p.type || 'sine';
+    osc.frequency.setValueAtTime(p.baseFreq || 330, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(p.endFreq || 520, audioCtx.currentTime + 0.4);
     gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
     gain.gain.setValueAtTime(0.3, audioCtx.currentTime + 0.5);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (p.duration || 1.5));
     osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(660, audioCtx.currentTime + 0.2);
-    osc2.frequency.exponentialRampToValueAtTime(1040, audioCtx.currentTime + 0.5);
+    osc2.frequency.setValueAtTime((p.baseFreq || 330) * 2, audioCtx.currentTime + 0.2);
+    osc2.frequency.exponentialRampToValueAtTime((p.endFreq || 520) * 2, audioCtx.currentTime + 0.5);
     gain2.gain.setValueAtTime(0, audioCtx.currentTime);
     gain2.gain.setValueAtTime(0.1, audioCtx.currentTime + 0.2);
-    gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+    gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (p.duration || 1.5) * 0.8);
     osc.connect(gain); gain.connect(analyser);
     osc2.connect(gain2); gain2.connect(analyser);
     osc.start(); osc2.start();
-    osc.stop(audioCtx.currentTime + 1.5);
-    osc2.stop(audioCtx.currentTime + 1.2);
+    osc.stop(audioCtx.currentTime + (p.duration || 1.5));
+    osc2.stop(audioCtx.currentTime + (p.duration || 1.5) * 0.8);
   },
 
-  // () = embrace — two mirrored tones meeting in the middle
-  parens: () => {
+  parens: (params) => {
+    const p = params || soundParams.parens;
+    const highFreq = p.baseFreq || 880;
+    const lowFreq = p.endFreq || 440;
+    
     const oscL = audioCtx.createOscillator();
     const gainL = audioCtx.createGain();
-    oscL.type = 'sine';
-    oscL.frequency.setValueAtTime(880, audioCtx.currentTime);
-    oscL.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.4);
+    oscL.type = p.type || 'sine';
+    oscL.frequency.setValueAtTime(highFreq, audioCtx.currentTime);
+    oscL.frequency.exponentialRampToValueAtTime(lowFreq, audioCtx.currentTime + 0.4);
     gainL.gain.setValueAtTime(0.25, audioCtx.currentTime);
     gainL.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
     oscL.connect(gainL); gainL.connect(analyser);
@@ -569,19 +751,19 @@ const sounds = {
 
     const oscR = audioCtx.createOscillator();
     const gainR = audioCtx.createGain();
-    oscR.type = 'sine';
-    oscR.frequency.setValueAtTime(440, audioCtx.currentTime + 0.15);
-    oscR.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.55);
+    oscR.type = p.type || 'sine';
+    oscR.frequency.setValueAtTime(lowFreq, audioCtx.currentTime + 0.15);
+    oscR.frequency.exponentialRampToValueAtTime(highFreq, audioCtx.currentTime + 0.55);
     gainR.gain.setValueAtTime(0, audioCtx.currentTime);
     gainR.gain.setValueAtTime(0.25, audioCtx.currentTime + 0.15);
-    gainR.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.95);
+    gainR.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (p.duration || 0.95));
     oscR.connect(gainR); gainR.connect(analyser);
-    oscR.start(); oscR.stop(audioCtx.currentTime + 0.95);
+    oscR.start(); oscR.stop(audioCtx.currentTime + (p.duration || 0.95));
 
     const oscM = audioCtx.createOscillator();
     const gainM = audioCtx.createGain();
     oscM.type = 'triangle';
-    oscM.frequency.value = 660;
+    oscM.frequency.value = (highFreq + lowFreq) / 2;
     gainM.gain.setValueAtTime(0, audioCtx.currentTime);
     gainM.gain.setValueAtTime(0.15, audioCtx.currentTime + 0.3);
     gainM.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
@@ -589,8 +771,9 @@ const sounds = {
     oscM.start(); oscM.stop(audioCtx.currentTime + 1.2);
   },
 
-  // & = intertwined voices weaving
-  ampersand: () => {
+  ampersand: (params) => {
+    const p = params || soundParams.ampersand;
+    const steps = p.steps || [293.66, 349.23, 440];
     const osc1 = audioCtx.createOscillator();
     const osc2 = audioCtx.createOscillator();
     const osc3 = audioCtx.createOscillator();
@@ -598,36 +781,36 @@ const sounds = {
     const gain2 = audioCtx.createGain();
     const gain3 = audioCtx.createGain();
 
-    osc1.type = 'triangle';
-    osc1.frequency.setValueAtTime(293.66, audioCtx.currentTime);
-    osc1.frequency.setValueAtTime(349.23, audioCtx.currentTime + 0.3);
-    osc1.frequency.setValueAtTime(440, audioCtx.currentTime + 0.6);
+    osc1.type = p.type || 'triangle';
+    osc1.frequency.setValueAtTime(steps[0], audioCtx.currentTime);
+    osc1.frequency.setValueAtTime(steps[1], audioCtx.currentTime + 0.3);
+    osc1.frequency.setValueAtTime(steps[2], audioCtx.currentTime + 0.6);
     gain1.gain.setValueAtTime(0.2, audioCtx.currentTime);
-    gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+    gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (p.duration || 1.5));
 
-    osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(440, audioCtx.currentTime);
-    osc2.frequency.setValueAtTime(349.23, audioCtx.currentTime + 0.3);
-    osc2.frequency.setValueAtTime(293.66, audioCtx.currentTime + 0.6);
+    osc2.type = p.type || 'triangle';
+    osc2.frequency.setValueAtTime(steps[2], audioCtx.currentTime);
+    osc2.frequency.setValueAtTime(steps[1], audioCtx.currentTime + 0.3);
+    osc2.frequency.setValueAtTime(steps[0], audioCtx.currentTime + 0.6);
     gain2.gain.setValueAtTime(0.2, audioCtx.currentTime);
-    gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+    gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (p.duration || 1.5));
 
     osc3.type = 'sine';
-    osc3.frequency.value = 146.83;
+    osc3.frequency.value = steps[0] / 2;
     gain3.gain.setValueAtTime(0.15, audioCtx.currentTime);
-    gain3.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.8);
+    gain3.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (p.duration || 1.5) * 1.2);
 
     osc1.connect(gain1); gain1.connect(analyser);
     osc2.connect(gain2); gain2.connect(analyser);
     osc3.connect(gain3); gain3.connect(analyser);
     osc1.start(); osc2.start(); osc3.start();
-    osc1.stop(audioCtx.currentTime + 1.5);
-    osc2.stop(audioCtx.currentTime + 1.5);
-    osc3.stop(audioCtx.currentTime + 1.8);
+    osc1.stop(audioCtx.currentTime + (p.duration || 1.5));
+    osc2.stop(audioCtx.currentTime + (p.duration || 1.5));
+    osc3.stop(audioCtx.currentTime + (p.duration || 1.5) * 1.2);
   },
 
-  // ! = sharp explosive hit
-  excl: () => {
+  excl: (params) => {
+    const p = params || soundParams.excl;
     const bufferSize = audioCtx.sampleRate * 0.08;
     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -644,32 +827,32 @@ const sounds = {
 
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(200, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 0.15);
+    osc.type = p.type || 'sawtooth';
+    osc.frequency.setValueAtTime(p.baseFreq || 200, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(p.endFreq || 60, audioCtx.currentTime + 0.15);
     gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (p.duration || 0.25));
     osc.connect(gain); gain.connect(analyser);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+    osc.start(); osc.stop(audioCtx.currentTime + (p.duration || 0.25));
   },
 
-  // \ = falling slide, gravity pull
-  backslash: () => {
+  backslash: (params) => {
+    const p = params || soundParams.backslash;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.8);
+    osc.type = p.type || 'sawtooth';
+    osc.frequency.setValueAtTime(p.baseFreq || 1000, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(p.endFreq || 80, audioCtx.currentTime + 0.8);
     gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
     gain.gain.setValueAtTime(0.2, audioCtx.currentTime + 0.3);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (p.duration || 1));
     osc.connect(gain); gain.connect(analyser);
-    osc.start(); osc.stop(audioCtx.currentTime + 1);
+    osc.start(); osc.stop(audioCtx.currentTime + (p.duration || 1));
 
     const osc2 = audioCtx.createOscillator();
     const gain2 = audioCtx.createGain();
     osc2.type = 'sine';
-    osc2.frequency.value = 80;
+    osc2.frequency.value = p.endFreq || 80;
     gain2.gain.setValueAtTime(0, audioCtx.currentTime);
     gain2.gain.setValueAtTime(0.1, audioCtx.currentTime + 0.7);
     gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.8);
@@ -677,32 +860,423 @@ const sounds = {
     osc2.start(); osc2.stop(audioCtx.currentTime + 1.8);
   },
 
-  // ~ = wobbling wave, vibrato
-  tilde: () => {
+  tilde: (params) => {
+    const p = params || soundParams.tilde;
     const osc = audioCtx.createOscillator();
     const lfo = audioCtx.createOscillator();
     const lfoGain = audioCtx.createGain();
     const gain = audioCtx.createGain();
 
     lfo.type = 'sine';
-    lfo.frequency.value = 6;
-    lfoGain.gain.value = 30;
+    lfo.frequency.value = p.lfoFreq || 6;
+    lfoGain.gain.value = p.lfoDepth || 30;
     lfo.connect(lfoGain);
     lfoGain.connect(osc.frequency);
 
-    osc.type = 'sine';
-    osc.frequency.value = 523.25;
+    osc.type = p.type || 'sine';
+    osc.frequency.value = p.baseFreq || 523.25;
     gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
     gain.gain.setValueAtTime(0.3, audioCtx.currentTime + 1);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (p.duration || 2));
 
     osc.connect(gain); gain.connect(analyser);
     osc.start(); lfo.start();
-    osc.stop(audioCtx.currentTime + 2);
-    lfo.stop(audioCtx.currentTime + 2);
+    osc.stop(audioCtx.currentTime + (p.duration || 2));
+    lfo.stop(audioCtx.currentTime + (p.duration || 2));
   }
 };
 
+// ===================== MIXER SOUND ENGINE =====================
+function rollDice(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function mixedSound(sourceType, connectedTypes, tensions) {
+  initAudio();
+  const sourceParams = soundParams[sourceType];
+  
+  // For each connected glyph, create a blended sound
+  connectedTypes.forEach((targetType, i) => {
+    const tension = tensions[i]; // 0 = loose (wild), 1 = tight (close to source)
+    const targetParams = soundParams[targetType];
+    
+    // Roll dice for frequency — tension controls the range
+    const freqRange = Math.abs((targetParams.baseFreq || 440) - (sourceParams.baseFreq || 440));
+    const midFreq = ((sourceParams.baseFreq || 440) + (targetParams.baseFreq || 440)) / 2;
+    const wildness = 1 - tension; // 0 = tight, 1 = wild
+    const rolledFreq = midFreq + (Math.random() - 0.5) * freqRange * wildness * 2;
+    
+    // Roll dice for duration
+    const midDur = ((sourceParams.duration || 1) + (targetParams.duration || 1)) / 2;
+    const rolledDur = midDur + (Math.random() - 0.5) * midDur * wildness;
+    
+    // Pick wave type randomly weighted by tension
+    const types = ['sine', 'triangle', 'square', 'sawtooth'];
+    const sourceTypeIdx = types.indexOf(sourceParams.type || 'sine');
+    const targetTypeIdx = types.indexOf(targetParams.type || 'sine');
+    const rolledTypeIdx = Math.random() > tension ? targetTypeIdx : sourceTypeIdx;
+    const waveType = types[Math.abs(rolledTypeIdx) % types.length];
+    
+    // Create the mixed oscillator
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = waveType;
+    
+    const safeFreq = Math.max(20, Math.min(rolledFreq, 4000));
+    const safeEndFreq = Math.max(20, Math.min(safeFreq * rollDice(0.3, 1.5), 4000));
+    const safeDur = Math.max(0.05, Math.min(rolledDur, 3));
+    
+    osc.frequency.setValueAtTime(safeFreq, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(safeEndFreq, audioCtx.currentTime + safeDur * 0.7);
+    
+    const vol = 0.25 / (connectedTypes.length + 1);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + safeDur);
+    
+    osc.connect(gain);
+    gain.connect(analyser);
+    osc.start();
+    osc.stop(audioCtx.currentTime + safeDur);
+    
+    // Add vibrato if wildness is high
+    if (wildness > 0.5) {
+      const lfo = audioCtx.createOscillator();
+      const lfoGain = audioCtx.createGain();
+      lfo.type = 'sine';
+      lfo.frequency.value = rollDice(2, 12);
+      lfoGain.gain.value = rollDice(5, 50) * wildness;
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc.frequency);
+      lfo.start();
+      lfo.stop(audioCtx.currentTime + safeDur);
+    }
+  });
+}
+
+// ===================== CONNECTION GRAPH =====================
+const connections = []; // {fromIdx, toIdx, tension, pathEl, handleEl, id}
+let connectionIdCounter = 0;
+let mixerMode = false;
+let draggingFrom = null;
+let dragLine = null;
+let draggingTension = null;
+
+const svg = document.getElementById('connection-svg');
+const glyphs = document.querySelectorAll('.glyph');
+
+function getGlyphCenter(idx) {
+  const el = glyphs[idx];
+  const rect = el.getBoundingClientRect();
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
+function getConnectionColor(fromIdx, toIdx) {
+  const fromType = glyphs[fromIdx].dataset.note;
+  const toType = glyphs[toIdx].dataset.note;
+  return blendTwoColors(glyphColors[fromType], glyphColors[toType], 0.5);
+}
+
+function createSVGPath() {
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.classList.add('connection-line');
+  svg.appendChild(path);
+  return path;
+}
+
+function createTensionHandle() {
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.classList.add('tension-handle');
+  circle.setAttribute('r', '7');
+  svg.appendChild(circle);
+  return circle;
+}
+
+function updateConnectionPath(conn, time) {
+  const from = getGlyphCenter(conn.fromIdx);
+  const to = getGlyphCenter(conn.toIdx);
+  const mid = {
+    x: (from.x + to.x) / 2,
+    y: (from.y + to.y) / 2
+  };
+  
+  // Tension affects curve amplitude: loose = big sag, tight = almost straight
+  const dist = Math.sqrt((to.x - from.x) ** 2 + (to.y - from.y) ** 2);
+  const looseness = (1 - conn.tension) * dist * 0.4;
+  
+  // Oscillation — the connection breathes
+  const oscAmount = looseness * 0.15;
+  const oscPhase = (time || 0) * 0.002 + conn.id * 1.7;
+  const oscY = Math.sin(oscPhase) * oscAmount;
+  
+  const cpY = mid.y + looseness + oscY;
+  
+  const d = `M ${from.x} ${from.y} Q ${mid.x} ${cpY} ${to.x} ${to.y}`;
+  conn.pathEl.setAttribute('d', d);
+  
+  const color = getConnectionColor(conn.fromIdx, conn.toIdx);
+  conn.pathEl.setAttribute('stroke', color);
+  
+  // Position handle at curve midpoint
+  const handleY = mid.y + looseness * 0.5 + oscY * 0.5;
+  conn.handleEl.setAttribute('cx', mid.x);
+  conn.handleEl.setAttribute('cy', handleY);
+  conn.handleEl.setAttribute('stroke', color);
+  conn.handleEl._conn = conn;
+  conn.handleEl._baseY = mid.y;
+  conn.handleEl._dist = dist;
+}
+
+function updateAllConnections(time) {
+  connections.forEach(conn => updateConnectionPath(conn, time));
+}
+
+function animateConnections(time) {
+  updateAllConnections(time);
+  requestAnimationFrame(animateConnections);
+}
+requestAnimationFrame(animateConnections);
+
+function addConnection(fromIdx, toIdx) {
+  // Check if connection already exists
+  const exists = connections.find(c => 
+    (c.fromIdx === fromIdx && c.toIdx === toIdx) ||
+    (c.fromIdx === toIdx && c.toIdx === fromIdx)
+  );
+  if (exists || fromIdx === toIdx) return;
+  
+  const pathEl = createSVGPath();
+  const handleEl = createTensionHandle();
+  const conn = {
+    fromIdx,
+    toIdx,
+    tension: 0.5, // default: middle
+    pathEl,
+    handleEl,
+    id: connectionIdCounter++
+  };
+  connections.push(conn);
+  updateConnectionCounts();
+  
+  // Enable pointer events on handle for tension dragging
+  handleEl.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    draggingTension = conn;
+  });
+  
+  handleEl.addEventListener('touchstart', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    draggingTension = conn;
+  }, { passive: false });
+  
+  // Double-click path to break connection
+  pathEl.addEventListener('dblclick', (e) => {
+    e.stopPropagation();
+    breakConnection(conn);
+  });
+  
+  // Make path clickable in mixer mode
+  pathEl.style.pointerEvents = 'stroke';
+}
+
+function breakConnection(conn) {
+  conn.pathEl.classList.add('snap-break');
+  setTimeout(() => {
+    conn.pathEl.remove();
+    conn.handleEl.remove();
+    const idx = connections.indexOf(conn);
+    if (idx > -1) connections.splice(idx, 1);
+    updateConnectionCounts();
+  }, 400);
+}
+
+function updateConnectionCounts() {
+  glyphs.forEach((g, idx) => {
+    const count = connections.filter(c => c.fromIdx === idx || c.toIdx === idx).length;
+    g.querySelector('.connection-count').textContent = count;
+  });
+}
+
+// Get all connected glyphs via BFS (propagation)
+function getConnectedGraph(startIdx) {
+  const visited = new Set();
+  const queue = [startIdx];
+  const result = []; // {idx, tension, depth}
+  visited.add(startIdx);
+  
+  while (queue.length > 0) {
+    const current = queue.shift();
+    const currentDepth = result.find(r => r.idx === current)?.depth || 0;
+    
+    connections.forEach(conn => {
+      let neighbor = -1;
+      let tension = conn.tension;
+      if (conn.fromIdx === current && !visited.has(conn.toIdx)) {
+        neighbor = conn.toIdx;
+      } else if (conn.toIdx === current && !visited.has(conn.fromIdx)) {
+        neighbor = conn.fromIdx;
+      }
+      if (neighbor >= 0) {
+        visited.add(neighbor);
+        result.push({ idx: neighbor, tension, depth: currentDepth + 1 });
+        queue.push(neighbor);
+      }
+    });
+  }
+  return result;
+}
+
+// Pulse animation on connections when playing
+function pulseConnections(idx) {
+  connections.forEach(conn => {
+    if (conn.fromIdx === idx || conn.toIdx === idx) {
+      conn.pathEl.classList.add('active-pulse');
+      conn.pathEl.style.filter = 'url(#glow-filter)';
+      setTimeout(() => {
+        conn.pathEl.classList.remove('active-pulse');
+        conn.pathEl.style.filter = '';
+      }, 500);
+    }
+  });
+}
+
+// ===================== MIXER TOGGLE =====================
+const mixerToggle = document.getElementById('mixerToggle');
+mixerToggle.addEventListener('click', () => {
+  mixerMode = !mixerMode;
+  mixerToggle.classList.toggle('active', mixerMode);
+  document.body.classList.toggle('mixer-mode', mixerMode);
+  svg.classList.toggle('mixer-active', mixerMode);
+});
+
+// ===================== DRAG TO CONNECT =====================
+glyphs.forEach((el, idx) => {
+  el.addEventListener('mousedown', (e) => {
+    if (!mixerMode) return;
+    if (e.target.closest('.glyph-rate')) return;
+    e.preventDefault();
+    draggingFrom = idx;
+    dragLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    dragLine.classList.add('drag-line');
+    svg.appendChild(dragLine);
+  });
+  
+  el.addEventListener('touchstart', (e) => {
+    if (!mixerMode) return;
+    if (e.target.closest('.glyph-rate')) return;
+    e.preventDefault();
+    draggingFrom = idx;
+    dragLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    dragLine.classList.add('drag-line');
+    svg.appendChild(dragLine);
+  }, { passive: false });
+  
+  el.addEventListener('touchend', (e) => {
+    if (!mixerMode || draggingFrom === null) return;
+    const touch = e.changedTouches[0];
+    // Find which glyph the touch is over using bounding rects
+    let targetIdx = -1;
+    glyphs.forEach((g, gIdx) => {
+      const rect = g.getBoundingClientRect();
+      if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+          touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+        targetIdx = gIdx;
+      }
+    });
+    if (targetIdx >= 0 && targetIdx !== draggingFrom) {
+      addConnection(draggingFrom, targetIdx);
+    }
+  });
+});
+
+document.addEventListener('mousemove', (e) => {
+  // Drag line for new connection
+  if (draggingFrom !== null && dragLine) {
+    const from = getGlyphCenter(draggingFrom);
+    const mid = { x: (from.x + e.clientX) / 2, y: (from.y + e.clientY) / 2 + 30 };
+    dragLine.setAttribute('d', `M ${from.x} ${from.y} Q ${mid.x} ${mid.y} ${e.clientX} ${e.clientY}`);
+  }
+  
+  // Tension dragging
+  if (draggingTension) {
+    const conn = draggingTension;
+    const from = getGlyphCenter(conn.fromIdx);
+    const to = getGlyphCenter(conn.toIdx);
+    const midY = (from.y + to.y) / 2;
+    const dist = Math.sqrt((to.x - from.x) ** 2 + (to.y - from.y) ** 2);
+    const maxSag = dist * 0.5;
+    const currentSag = e.clientY - midY;
+    
+    // Tension: 1 = tight (near midpoint), 0 = loose (far from midpoint)
+    let newTension = 1 - Math.max(0, Math.min(currentSag / maxSag, 1.5));
+    
+    // Break if pulled too far
+    if (newTension < -0.2) {
+      breakConnection(conn);
+      draggingTension = null;
+      return;
+    }
+    
+    conn.tension = Math.max(0, Math.min(1, newTension));
+  }
+});
+
+document.addEventListener('touchmove', (e) => {
+  const touch = e.touches[0];
+  if (draggingFrom !== null && dragLine) {
+    const from = getGlyphCenter(draggingFrom);
+    const mid = { x: (from.x + touch.clientX) / 2, y: (from.y + touch.clientY) / 2 + 30 };
+    dragLine.setAttribute('d', `M ${from.x} ${from.y} Q ${mid.x} ${mid.y} ${touch.clientX} ${touch.clientY}`);
+  }
+  if (draggingTension) {
+    const conn = draggingTension;
+    const from = getGlyphCenter(conn.fromIdx);
+    const to = getGlyphCenter(conn.toIdx);
+    const midY = (from.y + to.y) / 2;
+    const dist = Math.sqrt((to.x - from.x) ** 2 + (to.y - from.y) ** 2);
+    const maxSag = dist * 0.5;
+    const currentSag = touch.clientY - midY;
+    let newTension = 1 - Math.max(0, Math.min(currentSag / maxSag, 1.5));
+    if (newTension < -0.2) {
+      breakConnection(conn);
+      draggingTension = null;
+      return;
+    }
+    conn.tension = Math.max(0, Math.min(1, newTension));
+  }
+}, { passive: false });
+
+document.addEventListener('mouseup', (e) => {
+  // Complete connection if dragging in mixer mode
+  if (mixerMode && draggingFrom !== null) {
+    glyphs.forEach((g, gIdx) => {
+      const rect = g.getBoundingClientRect();
+      if (e.clientX >= rect.left && e.clientX <= rect.right &&
+          e.clientY >= rect.top && e.clientY <= rect.bottom &&
+          gIdx !== draggingFrom) {
+        addConnection(draggingFrom, gIdx);
+      }
+    });
+  }
+  if (dragLine) {
+    dragLine.remove();
+    dragLine = null;
+  }
+  draggingFrom = null;
+  draggingTension = null;
+});
+
+document.addEventListener('touchend', () => {
+  if (dragLine) {
+    dragLine.remove();
+    dragLine = null;
+  }
+  draggingFrom = null;
+  draggingTension = null;
+});
+
+// ===================== PLAYBACK ENGINE =====================
 let loopRate = 300;
 const activeLoops = {};
 const activeKeys = {};
@@ -721,7 +1295,6 @@ document.querySelectorAll('.glyph').forEach(el => {
       const rate = parseInt(slider.value);
       el.dataset.rate = rate;
       valDisplay.textContent = rate;
-      // Update running loop if active
       const type = el.dataset.note;
       ['mouse-', 'touch-', 'key-'].forEach(prefix => {
         const id = prefix + (prefix === 'key-' ? Object.keys(activeKeys).find(k => {
@@ -741,21 +1314,37 @@ document.querySelectorAll('.glyph').forEach(el => {
   }
 });
 
+// Legend update with !U support
 function updateLegend() {
   const legA = document.getElementById('leg-a');
   const legE = document.getElementById('leg-e');
   const legI = document.getElementById('leg-i');
   const legO = document.getElementById('leg-o');
+  const legU = document.getElementById('leg-u');
   const blended = blendColors();
 
-  [legA, legE, legI, legO].forEach(el => {
+  [legA, legE, legI, legO, legU].forEach(el => {
     el.classList.remove('active');
     el.querySelector('.legend-dot').style.setProperty('--active-color', '#000');
   });
 
   const holdCount = Object.keys(activeLoops).length;
+  
+  // Check if propagation is active
+  let propagationActive = false;
+  if (holdCount > 0 || activeNoteCount > 0) {
+    // Check if any playing glyph has connections
+    document.querySelectorAll('.glyph.playing').forEach(g => {
+      const idx = parseInt(g.dataset.idx);
+      const graph = getConnectedGraph(idx);
+      if (graph.length > 0) propagationActive = true;
+    });
+  }
 
-  if (holdCount === 0 && activeNoteCount > 0) {
+  if (propagationActive) {
+    legU.classList.add('active');
+    legU.querySelector('.legend-dot').style.setProperty('--active-color', blended);
+  } else if (holdCount === 0 && activeNoteCount > 0) {
     if (activeNoteCount === 1) {
       legA.classList.add('active');
       legA.querySelector('.legend-dot').style.setProperty('--active-color', blended);
@@ -780,7 +1369,30 @@ function triggerSound(el, type) {
   el.appendChild(ripple);
   setTimeout(() => ripple.remove(), 800);
   
-  sounds[type]();
+  const idx = parseInt(el.dataset.idx);
+  const graph = getConnectedGraph(idx);
+  
+  if (graph.length > 0) {
+    // Play the original sound
+    sounds[type]();
+    
+    // Play mixed sounds via propagation
+    const connectedTypes = graph.map(g => glyphs[g.idx].dataset.note);
+    const tensions = graph.map(g => g.tension);
+    mixedSound(type, connectedTypes, tensions);
+    
+    // Pulse visual connections
+    pulseConnections(idx);
+    
+    // Add connected glyph colors
+    graph.forEach(g => {
+      const noteType = glyphs[g.idx].dataset.note;
+      activeColors.add(glyphColors[noteType]);
+    });
+    currentColor = blendColors();
+  } else {
+    sounds[type]();
+  }
 }
 
 function startLoop(el, type, id) {
@@ -806,10 +1418,25 @@ function stopLoop(el, id) {
   const type = el.dataset.note;
   const color = glyphColors[type] || '#000';
   activeColors.delete(color);
+  
+  // Also remove connected colors
+  const idx = parseInt(el.dataset.idx);
+  const graph = getConnectedGraph(idx);
+  graph.forEach(g => {
+    const noteType = glyphs[g.idx].dataset.note;
+    // Only remove if not being played by another active loop
+    const stillActive = Object.keys(activeLoops).some(loopId => {
+      const loopEl = document.querySelector(`.glyph[data-note="${noteType}"].playing`);
+      return loopEl && loopEl !== el;
+    });
+    if (!stillActive) {
+      activeColors.delete(glyphColors[noteType]);
+    }
+  });
+  
   currentColor = blendColors();
   el.classList.remove('playing');
   updateLegend();
-  // Fade out legend after release
   if (Object.keys(activeLoops).length === 0) {
     clearTimeout(sustainTimers.fade);
     sustainTimers.fade = setTimeout(() => {
@@ -819,39 +1446,47 @@ function stopLoop(el, id) {
   }
 }
 
-// Mouse hold
+// Mouse/touch hold — only in non-mixer mode or if not dragging
 document.querySelectorAll('.glyph').forEach(el => {
   const type = el.dataset.note;
 
   el.addEventListener('mousedown', e => {
+    if (mixerMode) return; // mixer mode handles its own mousedown
+    if (e.target.closest('.glyph-rate')) return;
     e.preventDefault();
     startLoop(el, type, 'mouse-' + type);
   });
 
   el.addEventListener('touchstart', e => {
+    if (mixerMode) return;
+    if (e.target.closest('.glyph-rate')) return;
     e.preventDefault();
     startLoop(el, type, 'touch-' + type);
   }, { passive: false });
 });
 
 document.addEventListener('mouseup', () => {
-  document.querySelectorAll('.glyph').forEach(el => {
-    stopLoop(el, 'mouse-' + el.dataset.note);
-  });
+  if (!mixerMode) {
+    document.querySelectorAll('.glyph').forEach(el => {
+      stopLoop(el, 'mouse-' + el.dataset.note);
+    });
+  }
 });
 
 document.addEventListener('touchend', () => {
-  document.querySelectorAll('.glyph').forEach(el => {
-    stopLoop(el, 'touch-' + el.dataset.note);
-  });
+  if (!mixerMode) {
+    document.querySelectorAll('.glyph').forEach(el => {
+      stopLoop(el, 'touch-' + el.dataset.note);
+    });
+  }
 });
 
-// Keyboard hold
+// Keyboard hold — works in both modes
 document.addEventListener('keydown', e => {
   if (keyMap[e.key] === undefined || activeKeys[e.key]) return;
   activeKeys[e.key] = true;
-  const glyphs = document.querySelectorAll('.glyph');
-  const glyph = glyphs[keyMap[e.key]];
+  const allGlyphs = document.querySelectorAll('.glyph');
+  const glyph = allGlyphs[keyMap[e.key]];
   if (glyph) {
     startLoop(glyph, glyph.dataset.note, 'key-' + e.key);
   }
@@ -860,8 +1495,8 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keyup', e => {
   if (keyMap[e.key] === undefined) return;
   delete activeKeys[e.key];
-  const glyphs = document.querySelectorAll('.glyph');
-  const glyph = glyphs[keyMap[e.key]];
+  const allGlyphs = document.querySelectorAll('.glyph');
+  const glyph = allGlyphs[keyMap[e.key]];
   if (glyph) {
     stopLoop(glyph, 'key-' + e.key);
   }
